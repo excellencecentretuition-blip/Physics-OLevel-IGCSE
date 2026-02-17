@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ea580c">
+    <link rel="manifest" href="manifest.json">
+    <title>Physics O Levels / IGCSE – Question Bank</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root { --primary: #ea580c; --primary-dark: #c2410c; --accent: #f97316; --text: #431407; --bg: #fff7ed; --card: #ffffff; --border: #fed7aa; --danger: #e74c3c; --muted: #64748b; --success: #22c55e; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; color: var(--text); position: relative; }
+        header { position: absolute; top: 20px; right: 20px; z-index: 10; }
+        .brand-box { text-align: right; border-right: 6px solid var(--primary); padding-right: 15px; }
+        .brand-box h1 { margin: 0; color: var(--primary); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 2rem; font-weight: 800; line-height: 0.8; text-transform: uppercase; letter-spacing: -1px; }
+        .brand-box p { margin: 5px 0 0; color: var(--muted); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1rem; font-style: italic; }
+        .card { background: var(--card); width: 100%; max-width: 620px; padding: 16px 20px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.06); border: 1px solid var(--border); text-align: center; margin-top: 20px; box-sizing: border-box; }
+        .card-title { font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 12px; }
+        .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+        .stat-item { background: white; padding: 12px; border-radius: 14px; text-align: center; color: var(--primary-dark); box-shadow: 0 4px 10px rgba(234, 88, 12, 0.1); border: 1px solid var(--border); font-size: 0.95rem; font-weight: 600; }
+        .stat-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; display: block; }
+        .stat-val { font-size: 1.2rem; font-weight: bold; color: var(--primary); }
+        .question-text { font-size: 1.2rem; font-weight: bold; color: var(--primary); margin-bottom: 10px; line-height: 1.3; text-align: left; }
+        .points-input-wrap { margin-bottom: 12px; text-align: left; }
+        .point-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+        .point-row .point-label { flex-shrink: 0; width: 58px; font-size: 0.8rem; font-weight: 700; color: var(--primary); }
+        .point-row input { flex: 1; min-width: 0; padding: 8px 10px; border: 2px solid #ced4da; border-radius: 8px; font-size: 0.9rem; outline: none; box-sizing: border-box; }
+        .point-row input:focus { border-color: var(--primary); }
+        .point-row input.matched { border-color: var(--success); background: #f0fdf4; }
+        .point-row input.missed { border-color: var(--danger); background: #fef2f2; }
+        .point-row .point-mark { flex-shrink: 0; font-size: 0.75rem; color: var(--muted); font-weight: 600; width: 42px; text-align: right; }
+        .single-answer-wrap { margin-bottom: 12px; text-align: left; }
+        .single-answer-wrap input { width: 100%; padding: 10px 14px; border: 2px solid #ced4da; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
+        .single-answer-wrap input:focus { border-color: var(--primary); outline: none; }
+        .single-answer-wrap input.matched { border-color: var(--success); background: #f0fdf4; }
+        .single-answer-wrap input.missed { border-color: var(--danger); background: #fef2f2; }
+        .ans-box { background: #f8fafc; padding: 12px; border-radius: 10px; text-align: left; margin-bottom: 12px; display: none; border: 1px solid var(--border); }
+        .ans-box .points-score { font-weight: 800; font-size: 1rem; margin-bottom: 8px; color: var(--primary); }
+        .compare-item { margin-bottom: 6px; padding: 6px 10px; border-radius: 8px; border-left: 3px solid #cbd5e1; background: white; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+        .compare-item.got { border-left-color: var(--success); background: #f0fdf4; }
+        .compare-item.miss { border-left-color: var(--danger); background: #fef2f2; }
+        .compare-item .mark-icon { font-size: 0.95rem; flex-shrink: 0; }
+        .compare-item .scheme-text { font-size: 0.9rem; flex: 1; min-width: 120px; }
+        .compare-item .your-text { font-size: 0.8rem; color: var(--muted); }
+        .compare-item .dispute-wrap { flex-shrink: 0; }
+        .dispute-btn { padding: 8px 14px; font-size: 0.9rem; border-radius: 8px; border: 2px solid var(--primary); background: var(--primary); color: white; cursor: pointer; font-weight: 700; display: inline-block; margin-top: 4px; }
+        .dispute-btn:hover { background: var(--primary-dark); border-color: var(--primary-dark); color: white; }
+        .dispute-btn.disputed { opacity: 0.6; cursor: default; background: var(--muted); border-color: var(--muted); }
+        .compare-item.miss .dispute-wrap { width: 100%; margin-top: 4px; }
+        .disputes-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+        .dispute-stat { font-size: 0.85rem; color: var(--muted); margin-bottom: 10px; }
+        .dispute-item { margin-bottom: 12px; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: #f8fafc; font-size: 0.85rem; }
+        .dispute-item.pending { border-left: 4px solid #f59e0b; }
+        .dispute-item.approved { border-left: 4px solid var(--success); }
+        .dispute-item.dismissed { border-left: 4px solid var(--muted); }
+        .dispute-item .dispute-actions { margin-top: 8px; gap: 8px; display: flex; flex-wrap: wrap; }
+        .dispute-item .dispute-actions button { padding: 6px 12px; font-size: 0.8rem; min-width: auto; }
+        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        button { flex: 1; min-width: 90px; padding: 10px 14px; border-radius: 10px; border: none; color: white; font-weight: bold; cursor: pointer; font-size: 0.95rem; }
+        #submit-btn { background: var(--primary); }
+        #skip-btn { background: #a4b0be; }
+        #next-btn { background: #27ae60; display: none; }
+        .teacher-panel-wrap { max-width: 620px; width: 100%; margin-top: 24px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); overflow: hidden; box-sizing: border-box; }
+        .teacher-panel-header { padding: 12px 16px; background: #fff7ed; cursor: pointer; font-weight: 700; color: var(--primary-dark); user-select: none; display: flex; justify-content: space-between; align-items: center; }
+        .teacher-panel-header:hover { background: #fed7aa; }
+        .teacher-panel-body { display: none; padding: 16px; font-size: 0.9rem; border-top: 1px solid var(--border); }
+        .teacher-panel-body.open { display: block; }
+        .struggling-item { margin-bottom: 15px; padding: 12px; border-radius: 8px; border-left: 5px solid var(--danger); background: #fdf2f2; text-align: left; }
+        .bad-badge { background: var(--danger); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; float: right; }
+        .attempt-info { font-size: 0.85rem; margin-top: 5px; color: #555; }
+        .ctrl-btn { padding: 10px; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: bold; font-size: 0.8rem; }
+        .reset-link { display: block; margin-top: 20px; text-align: center; color: var(--muted); font-size: 0.9rem; text-decoration: none; }
+        .reset-link:hover { color: var(--danger); text-decoration: underline; }
+        footer { margin-top: 50px; padding: 40px 20px; border-top: 1px solid var(--border); background: var(--card); width: 100%; max-width: 620px; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+        footer a { text-decoration: none; }
+        footer .yt-links { display: flex; justify-content: center; gap: 50px; margin-bottom: 25px; flex-wrap: wrap; }
+        footer .yt-links a { color: var(--primary); font-size: 1.3rem; font-weight: 800; }
+        footer .loc-links { display: flex; justify-content: center; gap: 60px; flex-wrap: wrap; }
+        footer .loc-links a { color: var(--muted); font-size: 1.1rem; font-weight: 600; }
+        @media (max-width: 480px) {
+            body { align-items: flex-start; padding: 10px 12px 20px; }
+            .stats-bar { grid-template-columns: 1fr 1fr; }
+            .btn-group { flex-direction: column; }
+            button { min-width: 100%; }
+            header { position: absolute; top: 10px; right: 12px; }
+            .brand-box { text-align: right; border-right: 4px solid var(--primary); padding-right: 10px; border-bottom: none; }
+            .brand-box h1 { font-size: 1.25rem; line-height: 1.1; }
+            .brand-box p { font-size: 0.8rem; margin-top: 2px; }
+            .card { margin-top: 52px; }
+        }
+    </style>
+</head>
+<body>
+<header><div class="brand-box"><h1>Excellence</h1><p>By Adeel Kapasi</p></div></header>
+
+<div class="card">
+    <div class="card-title">Physics O Levels / IGCSE – Question Bank</div>
+    <select id="sectionFilter" onchange="initSession()" style="padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 10px; font-size: 0.9rem; width: 100%; max-width: 360px;">
+        <option value="">-- Select chapter --</option>
+    </select>
+    <div class="stats-bar">
+        <div class="stat-item"><span class="stat-label">SESSION SCORE</span><span class="stat-val" id="live-score">0</span></div>
+        <div class="stat-item"><span class="stat-label">PROGRESS</span><span class="stat-val" id="session-count">0/20</span></div>
+        <div class="stat-item"><span class="stat-label">UNMASTERED</span><span class="stat-val" id="pool-count">0</span></div>
+        <div class="stat-item"><span class="stat-label">DISPUTES</span><span class="stat-val" id="dispute-count">0</span></div>
+    </div>
+    <details class="dispute-help" style="margin-bottom:10px; text-align:left; font-size:0.8rem; color:var(--muted);">
+        <summary style="cursor:pointer; font-weight:600;">How disputes work</summary>
+        <ul style="margin:8px 0 0 16px; padding-right:10px;">
+            <li><strong>Student:</strong> When an answer is marked wrong (red ✗), a green <strong>«I was right»</strong> button appears under it. Click it to submit a dispute.</li>
+            <li><strong>Teacher:</strong> Open the <strong>Teacher Monitoring Panel</strong> below. Under Disputes: <strong>Approve</strong> = give the mark; <strong>Dismiss</strong> = reject. Export XLS includes all disputes.</li>
+        </ul>
+    </details>
+
+    <div id="quiz-content">
+        <div id="q-id" style="text-align: left; color: #999; font-size: 0.75rem; margin-bottom: 2px;">ID: --</div>
+        <div class="question-text" id="q-text">Select a chapter to start.</div>
+        <div id="single-wrap" style="display:none;" class="single-answer-wrap">
+            <label style="font-size:0.8rem;color:var(--muted);">Your answer</label>
+            <input type="text" id="user-answer-single" placeholder="Type your answer..." autocomplete="off">
+        </div>
+        <div id="points-wrap" style="display:none;" class="points-input-wrap"></div>
+        <div class="ans-box" id="answer-box">
+            <div class="points-score" id="points-score"></div>
+            <div id="answer-list"></div>
+        </div>
+        <div class="btn-group">
+            <button id="skip-btn" onclick="checkAnswer(true)">Skip</button>
+            <button id="submit-btn" onclick="checkAnswer(false)">Submit</button>
+            <button id="next-btn" onclick="nextQuestion()">Next Question →</button>
+        </div>
+    </div>
+    <div id="session-end-view" style="display:none; text-align:center;">
+        <h2>Session Complete!</h2>
+        <p id="mastery-update"></p>
+        <button onclick="initSession()" style="background:var(--primary); padding: 15px 40px;">Start New Session</button>
+    </div>
+</div>
+
+<div class="teacher-panel-wrap">
+    <div id="teacherHeader" class="teacher-panel-header"><span>Teacher Monitoring Panel</span><span id="teacherChevron">▼</span></div>
+    <div id="teacherBody" class="teacher-panel-body">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px;">
+            <button onclick="exportXLS()" class="ctrl-btn" style="background:#34495e;">Export XLS</button>
+            <button onclick="clearUIPanel()" class="ctrl-btn" style="background:#f39c12;">Clear Panel</button>
+            <button onclick="masterReset()" class="ctrl-btn" style="background:#c0392b; grid-column: span 2;">MASTER RESET</button>
+        </div>
+        <div class="disputes-section">
+            <div class="dispute-stat" id="dispute-stat">Disputes: 0 pending, 0 approved</div>
+            <p style="font-size:0.8rem; color:var(--muted); margin:4px 0 8px 0;">Approve = give the mark and add to mastery. Dismiss = reject the claim.</p>
+            <div id="disputes-list"></div>
+        </div>
+        <div id="struggling-list"></div>
+    </div>
+</div>
+<a href="#" class="reset-link" onclick="masterReset(); return false;">Reset all progress</a>
+<footer>
+    <div style="max-width: 800px; margin: 0 auto; text-align: center;">
+        <div class="yt-links">
+            <a href="http://www.youtube.com/@AdeelAbbasKapasi" target="_blank">▶ Adeel Kapasi</a>
+            <a href="http://www.youtube.com/@excellencetuitioncentre1786" target="_blank">▶ Excellence</a>
+        </div>
+        <div class="loc-links">
+            <a href="https://www.google.com/maps/place/Excellence+Tuition+Centre" target="_blank">📍 Campus 1</a>
+            <a href="https://www.google.com/maps/place/Excellence+O%2FA+Levels+Tuition" target="_blank">📍 Campus 2</a>
+        </div>
+    </div>
+</footer>
+
+<script src="physics_data.js"></script>
+<script>
+let fullData = [];
+let chapters = [];
+let appData = JSON.parse(localStorage.getItem('physics_ol_mastery')) || { mastered: [], correctHits: {}, struggling: {} };
+let disputeLog = JSON.parse(localStorage.getItem('physics_ol_disputes')) || [];
+let sessionQuestions = [], pointer = 0, sessionCorrect = 0, sessionMistakeLog = [];
+let lastCheckData = null;
+
+function loadData() {
+    try {
+        const chs = typeof window.physicsChapters !== 'undefined' ? window.physicsChapters : [];
+        chapters = chs;
+        fullData = [];
+        chs.forEach((ch, idx) => {
+            const chNum = idx + 1;
+            (ch.questions || []).forEach(q => {
+                fullData.push({ ...q, chapterIndex: chNum, chapterName: ch.chapter });
+            });
+        });
+    } catch (e) {
+        fullData = [];
+        chapters = [];
+    }
+    const qText = document.getElementById('q-text');
+    if (fullData.length === 0)
+        qText.innerHTML = 'Could not load questions. Keep Physics.html in the same folder as physics_data.js.';
+    const sel = document.getElementById('sectionFilter');
+    sel.innerHTML = '<option value="">-- Select chapter --</option>' +
+        chapters.map((ch, i) => '<option value="' + (i + 1) + '">' + (ch.chapter || '').replace(/\.(json|JSON)$/i, '') + ' (' + (ch.questions ? ch.questions.length : 0) + ')</option>').join('');
+    return Promise.resolve(fullData);
+}
+
+function initSession() {
+    if (fullData.length === 0) return;
+    const chVal = document.getElementById('sectionFilter').value;
+    if (!chVal) return;
+    pointer = 0;
+    sessionCorrect = 0;
+    document.getElementById('quiz-content').style.display = 'block';
+    document.getElementById('session-end-view').style.display = 'none';
+    document.getElementById('live-score').innerText = '0';
+    const chNum = parseInt(chVal, 10);
+    let pool = fullData.filter(q => q.chapterIndex === chNum && !appData.mastered.includes(q.id));
+    if (pool.length === 0) pool = fullData.filter(q => q.chapterIndex === chNum);
+    sessionQuestions = pool.sort(() => 0.5 - Math.random()).slice(0, 20);
+    renderQuestion();
+    updatePoolCount();
+}
+
+function isSingleMark(q) {
+    return (q.m === 1 && q.ans.length <= 1) || (q.ans.length === 1);
+}
+
+function renderQuestion() {
+    const q = sessionQuestions[pointer];
+    document.getElementById('q-id').innerText = 'ID: ' + q.id;
+    document.getElementById('q-text').innerText = q.q || '';
+    const singleWrap = document.getElementById('single-wrap');
+    const pointsWrap = document.getElementById('points-wrap');
+    const single = isSingleMark(q);
+    if (single) {
+        singleWrap.style.display = 'block';
+        pointsWrap.style.display = 'none';
+        const inp = document.getElementById('user-answer-single');
+        inp.value = '';
+        inp.disabled = false;
+        inp.classList.remove('matched', 'missed');
+        setTimeout(() => inp.focus(), 50);
+    } else {
+        singleWrap.style.display = 'none';
+        pointsWrap.style.display = 'block';
+        const n = Math.min(q.ans.length, 4);
+        pointsWrap.innerHTML = '';
+        for (let i = 0; i < n; i++) {
+            const row = document.createElement('div');
+            row.className = 'point-row';
+            row.innerHTML = '<span class="point-label">Point ' + (i + 1) + '</span><input type="text" id="user-point-' + (i + 1) + '" placeholder="Write point..." autocomplete="off"><span class="point-mark">1 mark</span>';
+            pointsWrap.appendChild(row);
+        }
+        for (let i = 1; i <= n; i++) {
+            const inp = document.getElementById('user-point-' + i);
+            if (inp) { inp.value = ''; inp.disabled = false; inp.classList.remove('matched', 'missed'); }
+        }
+        setTimeout(() => { const first = document.getElementById('user-point-1'); if (first) first.focus(); }, 50);
+    }
+    document.getElementById('answer-box').style.display = 'none';
+    document.getElementById('next-btn').style.display = 'none';
+    document.getElementById('submit-btn').style.display = 'block';
+    document.getElementById('skip-btn').style.display = 'block';
+    document.getElementById('session-count').innerText = (pointer + 1) + '/' + sessionQuestions.length;
+}
+
+function extractNumbers(s) {
+    const str = (s || '').replace(/,/g, '');
+    const matches = str.match(/-?\d+(\.\d+)?/g) || [];
+    return matches.map(m => parseFloat(m));
+}
+
+function matchSingle(userStr, ansArray) {
+    const u = (userStr || '').trim();
+    if (!u) return false;
+    const uNorm = u.replace(/[\s$,%()]/g, '').replace(/,/g, '').toLowerCase();
+    for (let i = 0; i < ansArray.length; i++) {
+        const a = (ansArray[i] || '').trim();
+        const aNorm = a.replace(/[\s$,%()]/g, '').replace(/,/g, '').toLowerCase();
+        if (uNorm === aNorm) return true;
+        const aNums = extractNumbers(a);
+        const uNums = extractNumbers(u);
+        if (aNums.length > 0 && uNums.length > 0) {
+            const tol = 0.01;
+            if (aNums.every(n => uNums.some(un => Math.abs(un - n) < tol))) return true;
+        }
+        if (aNorm.length >= 3 && uNorm.length >= 2 && (aNorm.includes(uNorm) || uNorm.includes(aNorm))) return true;
+    }
+    return false;
+}
+
+function matchMultiPoint(schemePoints, userPoints) {
+    const n = schemePoints.length;
+    const schemeKeywords = schemePoints.map(s => s.toLowerCase().split(/\W+/).filter(w => w.length > 2));
+    const usedScheme = schemePoints.map(() => false);
+    const usedUser = userPoints.map(() => false);
+    const pairs = [];
+    for (let si = 0; si < n; si++)
+        for (let ui = 0; ui < userPoints.length; ui++) {
+            let score = 0;
+            const uLower = (userPoints[ui] || '').toLowerCase();
+            schemeKeywords[si].forEach(kw => { if (uLower.includes(kw)) score++; });
+            pairs.push({ schemeIdx: si, userIdx: ui, score });
+        }
+    pairs.sort((a, b) => b.score - a.score);
+    const schemeGot = schemePoints.map(() => -1);
+    let marks = 0;
+    for (const p of pairs) {
+        if (usedScheme[p.schemeIdx] || usedUser[p.userIdx] || p.score < 2) continue;
+        usedScheme[p.schemeIdx] = true;
+        usedUser[p.userIdx] = true;
+        schemeGot[p.schemeIdx] = p.userIdx;
+        marks++;
+    }
+    return { marks, schemeGot };
+}
+
+function matchBlobToScheme(schemePoints, blob) {
+    const blobLower = (blob || '').toLowerCase();
+    const schemeKeywords = schemePoints.map(s => s.toLowerCase().split(/\W+/).filter(w => w.length > 2));
+    const schemeGot = schemePoints.map(() => -1);
+    let marks = 0;
+    for (let si = 0; si < schemePoints.length; si++) {
+        let score = 0;
+        schemeKeywords[si].forEach(kw => { if (blobLower.includes(kw)) score++; });
+        if (score >= 2) { schemeGot[si] = 0; marks++; }
+    }
+    return { marks, schemeGot };
+}
+
+function checkAnswer(isSkip) {
+    const q = sessionQuestions[pointer];
+    const box = document.getElementById('answer-box');
+    const list = document.getElementById('answer-list');
+    const scoreEl = document.getElementById('points-score');
+    const single = isSingleMark(q);
+
+    if (single) {
+        const userVal = document.getElementById('user-answer-single').value.trim();
+        const correct = !isSkip && matchSingle(userVal, q.ans);
+        document.getElementById('user-answer-single').disabled = true;
+        document.getElementById('user-answer-single').classList.add(correct ? 'matched' : 'missed');
+        scoreEl.innerHTML = isSkip ? 'Skipped. Correct answer(s):' : (correct ? 'Correct!' : 'Review:');
+        scoreEl.style.color = correct ? 'var(--success)' : 'var(--danger)';
+        lastCheckData = { q, rawUserPoints: [userVal] };
+        const partAPending = disputeLog.some(d => d.questionId === q.id && d.schemeIdx === 0 && d.approved === null);
+        const disputeBtn = correct ? '' : '<span class="dispute-wrap"><button type="button" class="dispute-btn' + (partAPending ? ' disputed' : '') + '" onclick="addDispute(0)" ' + (partAPending ? 'disabled' : '') + '>' + (partAPending ? 'Claimed' : 'I was right') + '</button></span>';
+        const ansDisplay = (q.ans || []).slice(0, 5).join(' / ');
+        list.innerHTML = '<div class="compare-item ' + (correct ? 'got' : 'miss') + '" data-scheme-idx="0"><span class="mark-icon">' + (correct ? '✓' : '✗') + '</span><span class="scheme-text">' + ansDisplay + '</span><span class="your-text">You: ' + (userVal || '—') + '</span>' + disputeBtn + '</div>';
+        box.style.display = 'block';
+        if (correct) {
+            sessionCorrect++;
+            appData.correctHits[q.id] = (appData.correctHits[q.id] || 0) + 1;
+            if (appData.correctHits[q.id] >= 2) appData.mastered.push(q.id);
+        } else {
+            appData.correctHits[q.id] = 0;
+            appData.struggling[q.id] = (appData.struggling[q.id] || 0) + 1;
+            sessionMistakeLog.push({ id: q.id, q: q.q, studentAns: isSkip ? '(Skipped)' : userVal, marks: '0/' + (q.m || 1), correctScheme: (q.ans || [])[0] });
+            renderTeacherReview();
+        }
+        updateDisputeCount();
+    } else {
+        const n = Math.min(q.ans.length, 4);
+        const userPoints = [];
+        for (let i = 1; i <= n; i++) {
+            const el = document.getElementById('user-point-' + i);
+            userPoints.push(el ? el.value.trim() : '');
+        }
+        let rawUserPoints = [];
+        for (let i = 1; i <= n; i++) {
+            const el = document.getElementById('user-point-' + i);
+            rawUserPoints.push(el ? el.value : '');
+        }
+        let marks = 0, schemeGot = q.ans.map(() => -1);
+        const nonEmptyCount = userPoints.filter(p => p !== '').length;
+        if (!isSkip && nonEmptyCount > 0) {
+            if (nonEmptyCount === 1) {
+                const blob = userPoints.find(p => p !== '') || '';
+                const result = matchBlobToScheme(q.ans, blob);
+                marks = result.marks;
+                schemeGot = result.schemeGot;
+                rawUserPoints = q.ans.map(() => blob);
+            } else {
+                const result = matchMultiPoint(q.ans, userPoints);
+                marks = result.marks;
+                schemeGot = result.schemeGot;
+            }
+        }
+        for (let i = 1; i <= n; i++) {
+            const inp = document.getElementById('user-point-' + i);
+            if (!inp) continue;
+            inp.disabled = true;
+            const hasContent = userPoints[i - 1] !== '';
+            const got = schemeGot.indexOf(i - 1) !== -1;
+            const cls = got ? 'matched' : (hasContent ? 'missed' : null);
+            if (cls) inp.classList.add(cls);
+        }
+        lastCheckData = { q, rawUserPoints };
+        const indices = q.ans.map((_, i) => i).sort(() => Math.random() - 0.5);
+        const pendingDisputes = disputeLog.filter(d => d.questionId === q.id && d.approved === null).map(d => d.schemeIdx);
+        const trunc = (s, len) => (s.length <= len ? s : s.slice(0, len) + '…');
+        list.innerHTML = indices.map(si => {
+            const got = schemeGot[si] >= 0;
+            const raw = got ? rawUserPoints[schemeGot[si]] : '';
+            const userText = got ? trunc(raw, 70) : '—';
+            const alreadyDisputed = pendingDisputes.indexOf(si) !== -1;
+            const disputeBtn = got ? '' : '<span class="dispute-wrap"><button type="button" class="dispute-btn ' + (alreadyDisputed ? 'disputed' : '') + '" onclick="addDispute(' + si + ')" ' + (alreadyDisputed ? 'disabled' : '') + '>' + (alreadyDisputed ? 'Claimed' : 'I was right') + '</button></span>';
+            return '<div class="compare-item ' + (got ? 'got' : 'miss') + '" data-scheme-idx="' + si + '"><span class="mark-icon">' + (got ? '✓' : '✗') + '</span><span class="scheme-text">' + (q.ans[si] || '') + '</span><span class="your-text">You: ' + userText + '</span>' + disputeBtn + '</div>';
+        }).join('');
+        scoreEl.innerHTML = isSkip ? 'Skipped – Mark scheme:' : 'Your score: <strong>' + marks + '/' + (q.m || q.ans.length) + '</strong> marks';
+        scoreEl.style.color = marks >= (q.m || q.ans.length) ? 'var(--success)' : (marks >= 1 ? 'var(--primary)' : 'var(--danger)');
+        box.style.display = 'block';
+        const maxM = q.m || q.ans.length;
+        const isCorrect = marks >= maxM;
+        if (isCorrect) {
+            sessionCorrect++;
+            appData.correctHits[q.id] = (appData.correctHits[q.id] || 0) + 1;
+            if (appData.correctHits[q.id] >= 2) appData.mastered.push(q.id);
+        } else {
+            appData.correctHits[q.id] = 0;
+            appData.struggling[q.id] = (appData.struggling[q.id] || 0) + 1;
+            sessionMistakeLog.push({ id: q.id, q: q.q, studentAns: isSkip ? '(Skipped)' : userPoints.join(' | '), marks: marks + '/' + maxM, correctScheme: (q.ans || []).join('; ') });
+            renderTeacherReview();
+        }
+        updateDisputeCount();
+    }
+
+    document.getElementById('live-score').innerText = sessionCorrect;
+    document.getElementById('submit-btn').style.display = 'none';
+    document.getElementById('skip-btn').style.display = 'none';
+    document.getElementById('next-btn').style.display = 'block';
+    save();
+}
+
+function nextQuestion() {
+    pointer++;
+    if (pointer >= sessionQuestions.length) {
+        document.getElementById('quiz-content').style.display = 'none';
+        document.getElementById('session-end-view').style.display = 'block';
+        document.getElementById('mastery-update').innerText = appData.mastered.length + ' / ' + fullData.length + ' mastered';
+    } else renderQuestion();
+}
+
+function save() { localStorage.setItem('physics_ol_mastery', JSON.stringify(appData)); }
+function saveDisputes() { localStorage.setItem('physics_ol_disputes', JSON.stringify(disputeLog)); }
+function addDispute(schemeIdx) {
+    if (!lastCheckData) return;
+    const { q, rawUserPoints } = lastCheckData;
+    if (disputeLog.some(d => d.questionId === q.id && d.schemeIdx === schemeIdx && d.approved === null)) return;
+    disputeLog.push({ questionId: q.id, qText: q.q, schemeIdx, schemeText: (q.ans || [])[schemeIdx], studentPoints: rawUserPoints.slice(), approved: null, timestamp: Date.now() });
+    saveDisputes();
+    updateDisputeCount();
+    renderDisputes();
+    const btn = document.querySelector('.compare-item[data-scheme-idx="' + schemeIdx + '"] .dispute-btn');
+    if (btn) { btn.textContent = 'Claimed'; btn.classList.add('disputed'); btn.disabled = true; }
+}
+function approveDispute(idx) {
+    const d = disputeLog[idx];
+    if (!d || d.approved !== null) return;
+    d.approved = true;
+    appData.correctHits[d.questionId] = (appData.correctHits[d.questionId] || 0) + 1;
+    if (appData.correctHits[d.questionId] >= 2 && !appData.mastered.includes(d.questionId)) appData.mastered.push(d.questionId);
+    save();
+    saveDisputes();
+    updateDisputeCount();
+    updatePoolCount();
+    renderDisputes();
+}
+function dismissDispute(idx) {
+    const d = disputeLog[idx];
+    if (!d || d.approved !== null) return;
+    d.approved = false;
+    saveDisputes();
+    updateDisputeCount();
+    renderDisputes();
+}
+function updateDisputeCount() {
+    const pending = disputeLog.filter(d => d.approved === null).length;
+    const approved = disputeLog.filter(d => d.approved === true).length;
+    const el = document.getElementById('dispute-count');
+    if (el) el.textContent = pending;
+    const stat = document.getElementById('dispute-stat');
+    if (stat) stat.textContent = 'Disputes: ' + pending + ' pending, ' + approved + ' approved';
+}
+function renderDisputes() {
+    const list = document.getElementById('disputes-list');
+    if (!list) return;
+    const pending = disputeLog.filter(d => d.approved === null);
+    const resolved = disputeLog.filter(d => d.approved !== null).slice(-15).reverse();
+    list.innerHTML = pending.map(d => {
+        const idx = disputeLog.indexOf(d);
+        return '<div class="dispute-item pending"><div class="scheme-label">' + d.questionId + ': ' + (d.qText || '').slice(0, 60) + '</div><div>Mark scheme: ' + (d.schemeText || '') + '</div><div class="student-label">Student: ' + (d.studentPoints || []).join(' | ') + '</div><div class="dispute-actions"><button type="button" class="ctrl-btn" style="background:var(--success);" onclick="approveDispute(' + idx + ')">Approve</button><button type="button" class="ctrl-btn" style="background:var(--muted);" onclick="dismissDispute(' + idx + ')">Dismiss</button></div></div>';
+    }).join('') + (resolved.length ? '<h4 style="margin-top:12px;font-size:0.9rem;">Recently resolved</h4>' : '') + resolved.map(d => '<div class="dispute-item ' + (d.approved ? 'approved' : 'dismissed') + '"><div class="scheme-label">' + d.questionId + '</div><div>' + (d.schemeText || '') + '</div></div>').join('');
+}
+function renderTeacherReview() {
+    const list = document.getElementById('struggling-list');
+    list.innerHTML = sessionMistakeLog.slice().reverse().map(m => '<div class="struggling-item"><span class="bad-badge">' + (m.marks || '—') + '</span><strong>' + m.id + ': ' + (m.q || '').slice(0, 50) + '</strong><div class="attempt-info">Student: <code>' + (m.studentAns || '').slice(0, 80) + '</code><br>Key: ' + (m.correctScheme || '').slice(0, 80) + '</div></div>').join('');
+    renderDisputes();
+}
+function exportXLS() {
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sessionMistakeLog), 'Errors');
+    if (disputeLog.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(disputeLog.map(d => ({ questionId: d.questionId, schemePoint: d.schemeText, studentPoints: (d.studentPoints || []).join(' | '), approved: d.approved === null ? 'pending' : d.approved ? 'approved' : 'dismissed' }))), 'Disputes');
+    XLSX.writeFile(wb, 'Physics_Report.xlsx');
+}
+function clearUIPanel() { sessionMistakeLog = []; renderTeacherReview(); updateDisputeCount(); }
+function masterReset() {
+    if (confirm('Wipe all progress?')) {
+        appData = { mastered: [], correctHits: {}, struggling: {} };
+        save();
+        if (confirm('Clear all disputes?')) { disputeLog = []; saveDisputes(); }
+        location.reload();
+    }
+}
+function updatePoolCount() {
+    const chVal = document.getElementById('sectionFilter').value;
+    if (!chVal) return;
+    const chNum = parseInt(chVal, 10);
+    const pool = fullData.filter(q => q.chapterIndex === chNum && !appData.mastered.includes(q.id));
+    document.getElementById('pool-count').innerText = fullData.length - appData.mastered.length;
+}
+document.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        if (document.getElementById('next-btn').style.display === 'block') nextQuestion();
+        else if (document.getElementById('submit-btn').style.display === 'block') checkAnswer(false);
+    }
+});
+function teacherPanelToggle() {
+    const body = document.getElementById('teacherBody');
+    const chevron = document.getElementById('teacherChevron');
+    body.classList.toggle('open');
+    chevron.textContent = body.classList.contains('open') ? '▲' : '▼';
+}
+document.getElementById('teacherHeader').addEventListener('click', teacherPanelToggle);
+
+loadData().then(data => {
+    if (data.length > 0) { updateDisputeCount(); }
+});
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(function () {});
+}
+</script>
+</body>
+</html>
