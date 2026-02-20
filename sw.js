@@ -1,4 +1,4 @@
-const CACHE_NAME = 'physics-pwa-v1';
+const CACHE_NAME = 'physics-pwa-v2';
 const URLS = [
   './',
   './index.html',
@@ -54,3 +54,4 @@ self.addEventListener('fetch', function (e) {
     })
   );
 });
+
