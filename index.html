@@ -72,6 +72,9 @@
         .bad-badge { background: var(--danger); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; float: right; }
         .attempt-info { font-size: 0.85rem; margin-top: 5px; color: #555; }
         .ctrl-btn { padding: 10px; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: bold; font-size: 0.8rem; }
+        .repeat-option-wrap { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; cursor: pointer; font-size: 0.95rem; font-weight: 600; color: var(--primary-dark); }
+        .repeat-option-wrap input { width: 18px; height: 18px; cursor: pointer; }
+        .repeat-option-hint { margin: 0 0 10px 0; font-size: 0.8rem; color: var(--muted); line-height: 1.3; }
         .reset-link { display: block; margin-top: 20px; text-align: center; color: var(--muted); font-size: 0.9rem; text-decoration: none; }
         .reset-link:hover { color: var(--danger); text-decoration: underline; }
         footer { margin-top: 50px; padding: 40px 20px; border-top: 1px solid var(--border); background: var(--card); width: 100%; max-width: 620px; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -101,6 +104,11 @@
     <select id="sectionFilter" onchange="initSession()" style="padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 10px; font-size: 0.9rem; width: 100%; max-width: 360px;">
         <option value="">-- Select chapter --</option>
     </select>
+    <label class="repeat-option-wrap">
+        <input type="checkbox" id="repeatForMastery" onchange="toggleRepeatForMastery()">
+        <span>Repeat questions until mastered</span>
+    </label>
+    <p class="repeat-option-hint" id="repeatOptionHint">When on: same question can appear again until you get it right twice. When off: each question is shown at most once; once mastered it is never repeated.</p>
     <div class="stats-bar">
         <div class="stat-item"><span class="stat-label">SESSION SCORE</span><span class="stat-val" id="live-score">0</span></div>
         <div class="stat-item"><span class="stat-label">PROGRESS</span><span class="stat-val" id="session-count">0/20</span></div>
@@ -174,10 +182,26 @@
 <script>
 let fullData = [];
 let chapters = [];
-let appData = JSON.parse(localStorage.getItem('physics_ol_mastery')) || { mastered: [], correctHits: {}, struggling: {} };
+let appData = JSON.parse(localStorage.getItem('physics_ol_mastery')) || { mastered: [], correctHits: {}, struggling: {}, attempted: [] };
 let disputeLog = JSON.parse(localStorage.getItem('physics_ol_disputes')) || [];
 let sessionQuestions = [], pointer = 0, sessionCorrect = 0, sessionMistakeLog = [];
+let sessionDisputeApprovedIds = [];
 let lastCheckData = null;
+
+function getRepeatForMastery() {
+    const stored = localStorage.getItem('physics_ol_repeat_for_mastery');
+    return stored === null || stored === 'true';
+}
+function setRepeatForMastery(value) {
+    localStorage.setItem('physics_ol_repeat_for_mastery', value ? 'true' : 'false');
+}
+function toggleRepeatForMastery() {
+    const cb = document.getElementById('repeatForMastery');
+    setRepeatForMastery(cb && cb.checked);
+    const chVal = document.getElementById('sectionFilter').value;
+    if (chVal) initSession();
+    else updatePoolCount();
+}
 
 function loadData() {
     try {
@@ -207,16 +231,30 @@ function initSession() {
     if (fullData.length === 0) return;
     const chVal = document.getElementById('sectionFilter').value;
     if (!chVal) return;
+    const cb = document.getElementById('repeatForMastery');
+    if (cb) cb.checked = getRepeatForMastery();
     pointer = 0;
     sessionCorrect = 0;
+    sessionDisputeApprovedIds = [];
     document.getElementById('quiz-content').style.display = 'block';
     document.getElementById('session-end-view').style.display = 'none';
     document.getElementById('live-score').innerText = '0';
     const chNum = parseInt(chVal, 10);
+    const repeatForMastery = getRepeatForMastery();
     let pool = fullData.filter(q => q.chapterIndex === chNum && !appData.mastered.includes(q.id));
-    if (pool.length === 0) pool = fullData.filter(q => q.chapterIndex === chNum);
+    if (!repeatForMastery) {
+        const attempted = appData.attempted || [];
+        pool = pool.filter(q => !attempted.includes(q.id));
+    }
+    if (pool.length === 0 && repeatForMastery) pool = fullData.filter(q => q.chapterIndex === chNum);
     sessionQuestions = pool.sort(() => 0.5 - Math.random()).slice(0, 20);
-    renderQuestion();
+    if (sessionQuestions.length === 0) {
+        document.getElementById('quiz-content').style.display = 'none';
+        document.getElementById('session-end-view').style.display = 'block';
+        document.getElementById('mastery-update').innerText = 'No more new questions in this chapter. Turn on "Repeat questions until mastered" to see questions again, or choose another chapter.';
+    } else {
+        renderQuestion();
+    }
     updatePoolCount();
 }
 
@@ -288,6 +326,38 @@ function matchSingle(userStr, ansArray) {
     return false;
 }
 
+function pointMatchesScheme(schemePoint, userPoint) {
+    const s = (schemePoint || '').trim().toLowerCase();
+    const u = (userPoint || '').trim().toLowerCase();
+    if (!u) return false;
+    const sNorm = s.replace(/\s+/g, ' ');
+    const uNorm = u.replace(/\s+/g, ' ');
+    if (sNorm === uNorm) return true;
+    const sNums = extractNumbers(s);
+    const uNums = extractNumbers(u);
+    const tol = 0.01;
+    if (sNums.length >= 2 && uNums.length >= 1) {
+        var userHasNumberNotInScheme = uNums.some(function(un) {
+            return !sNums.some(function(n) { return Math.abs(n - un) < tol; });
+        });
+        if (userHasNumberNotInScheme) return false;
+    }
+    if (sNums.length > 0 && uNums.length > 0) {
+        if (sNums.length === uNums.length && sNums.every(function(n, i) { return Math.abs(n - uNums[i]) < tol; })) return true;
+        if (sNums.length <= 5 && uNums.length <= 5 && sNums.every(function(n) { return uNums.some(function(un) { return Math.abs(un - n) < tol; }); }) && uNums.every(function(un) { return sNums.some(function(n) { return Math.abs(n - un) < tol; }); })) return true;
+        var sAbs = sNums.map(function(n) { return Math.abs(n); }).sort(function(a, b) { return a - b; });
+        var uAbs = uNums.map(function(n) { return Math.abs(n); }).sort(function(a, b) { return a - b; });
+        if (sAbs.length === uAbs.length && sAbs.every(function(n, i) { return Math.abs(n - uAbs[i]) < tol; })) return true;
+    }
+    const sWords = s.split(/\W+/).filter(function(w) { return w.length > 0; });
+    const uWords = u.split(/\W+/).filter(function(w) { return w.length > 0; });
+    const minLen = Math.min(sWords.length, uWords.length);
+    if (minLen === 0) return false;
+    const keywordOverlap = sWords.filter(function(w) { return w.length > 1 && u.indexOf(w) !== -1; }).length;
+    const need = sWords.some(function(w) { return w.length <= 2; }) ? 1 : 2;
+    return keywordOverlap >= need || (s.length <= 8 && u.length <= 12 && (uNorm.replace(/\s/g, '').indexOf(sNorm.replace(/\s/g, '')) !== -1 || sNorm.replace(/\s/g, '').indexOf(uNorm.replace(/\s/g, '')) !== -1));
+}
+
 function matchMultiPoint(schemePoints, userPoints) {
     const n = schemePoints.length;
     const schemeKeywords = schemePoints.map(s => s.toLowerCase().split(/\W+/).filter(w => w.length > 2));
@@ -296,6 +366,10 @@ function matchMultiPoint(schemePoints, userPoints) {
     const pairs = [];
     for (let si = 0; si < n; si++)
         for (let ui = 0; ui < userPoints.length; ui++) {
+            if (pointMatchesScheme(schemePoints[si], userPoints[ui])) {
+                pairs.push({ schemeIdx: si, userIdx: ui, score: 10 });
+                continue;
+            }
             let score = 0;
             const uLower = (userPoints[ui] || '').toLowerCase();
             schemeKeywords[si].forEach(kw => { if (uLower.includes(kw)) score++; });
@@ -305,7 +379,8 @@ function matchMultiPoint(schemePoints, userPoints) {
     const schemeGot = schemePoints.map(() => -1);
     let marks = 0;
     for (const p of pairs) {
-        if (usedScheme[p.schemeIdx] || usedUser[p.userIdx] || p.score < 2) continue;
+        const need = p.score >= 10 ? 1 : 2;
+        if (usedScheme[p.schemeIdx] || usedUser[p.userIdx] || p.score < need) continue;
         usedScheme[p.schemeIdx] = true;
         usedUser[p.userIdx] = true;
         schemeGot[p.schemeIdx] = p.userIdx;
@@ -315,14 +390,21 @@ function matchMultiPoint(schemePoints, userPoints) {
 }
 
 function matchBlobToScheme(schemePoints, blob) {
-    const blobLower = (blob || '').toLowerCase();
-    const schemeKeywords = schemePoints.map(s => s.toLowerCase().split(/\W+/).filter(w => w.length > 2));
+    const blobTrim = (blob || '').trim();
     const schemeGot = schemePoints.map(() => -1);
     let marks = 0;
     for (let si = 0; si < schemePoints.length; si++) {
+        if (pointMatchesScheme(schemePoints[si], blobTrim)) {
+            schemeGot[si] = 0;
+            marks++;
+            continue;
+        }
+        const blobLower = blobTrim.toLowerCase();
+        const schemeKeywords = schemePoints[si].toLowerCase().split(/\W+/).filter(w => w.length > 2);
         let score = 0;
-        schemeKeywords[si].forEach(kw => { if (blobLower.includes(kw)) score++; });
-        if (score >= 2) { schemeGot[si] = 0; marks++; }
+        schemeKeywords.forEach(kw => { if (blobLower.includes(kw)) score++; });
+        const need = schemeKeywords.length < 2 ? 1 : 2;
+        if (score >= need) { schemeGot[si] = 0; marks++; }
     }
     return { marks, schemeGot };
 }
@@ -350,13 +432,14 @@ function checkAnswer(isSkip) {
         if (correct) {
             sessionCorrect++;
             appData.correctHits[q.id] = (appData.correctHits[q.id] || 0) + 1;
-            if (appData.correctHits[q.id] >= 2) appData.mastered.push(q.id);
+            if (appData.correctHits[q.id] >= 2 && !appData.mastered.includes(q.id)) appData.mastered.push(q.id);
         } else {
             appData.correctHits[q.id] = 0;
             appData.struggling[q.id] = (appData.struggling[q.id] || 0) + 1;
             sessionMistakeLog.push({ id: q.id, q: q.q, studentAns: isSkip ? '(Skipped)' : userVal, marks: '0/' + (q.m || 1), correctScheme: (q.ans || [])[0] });
             renderTeacherReview();
         }
+        markAttempted(q);
         updateDisputeCount();
     } else {
         const n = Math.min(q.ans.length, 4);
@@ -414,13 +497,14 @@ function checkAnswer(isSkip) {
         if (isCorrect) {
             sessionCorrect++;
             appData.correctHits[q.id] = (appData.correctHits[q.id] || 0) + 1;
-            if (appData.correctHits[q.id] >= 2) appData.mastered.push(q.id);
+            if (appData.correctHits[q.id] >= 2 && !appData.mastered.includes(q.id)) appData.mastered.push(q.id);
         } else {
             appData.correctHits[q.id] = 0;
             appData.struggling[q.id] = (appData.struggling[q.id] || 0) + 1;
             sessionMistakeLog.push({ id: q.id, q: q.q, studentAns: isSkip ? '(Skipped)' : userPoints.join(' | '), marks: marks + '/' + maxM, correctScheme: (q.ans || []).join('; ') });
             renderTeacherReview();
         }
+        markAttempted(q);
         updateDisputeCount();
     }
 
@@ -440,6 +524,13 @@ function nextQuestion() {
     } else renderQuestion();
 }
 
+function markAttempted(q) {
+    if (!getRepeatForMastery() && q && q.id) {
+        appData.attempted = appData.attempted || [];
+        if (!appData.attempted.includes(q.id)) appData.attempted.push(q.id);
+        save();
+    }
+}
 function save() { localStorage.setItem('physics_ol_mastery', JSON.stringify(appData)); }
 function saveDisputes() { localStorage.setItem('physics_ol_disputes', JSON.stringify(disputeLog)); }
 function addDispute(schemeIdx) {
@@ -459,6 +550,11 @@ function approveDispute(idx) {
     d.approved = true;
     appData.correctHits[d.questionId] = (appData.correctHits[d.questionId] || 0) + 1;
     if (appData.correctHits[d.questionId] >= 2 && !appData.mastered.includes(d.questionId)) appData.mastered.push(d.questionId);
+    if (sessionQuestions.length > 0 && sessionQuestions.some(function(q) { return q.id === d.questionId; })) {
+        sessionCorrect++;
+        var liveEl = document.getElementById('live-score');
+        if (liveEl) liveEl.innerText = sessionCorrect;
+    }
     save();
     saveDisputes();
     updateDisputeCount();
@@ -505,7 +601,7 @@ function exportXLS() {
 function clearUIPanel() { sessionMistakeLog = []; renderTeacherReview(); updateDisputeCount(); }
 function masterReset() {
     if (confirm('Wipe all progress?')) {
-        appData = { mastered: [], correctHits: {}, struggling: {} };
+        appData = { mastered: [], correctHits: {}, struggling: {}, attempted: [] };
         save();
         if (confirm('Clear all disputes?')) { disputeLog = []; saveDisputes(); }
         location.reload();
@@ -515,8 +611,16 @@ function updatePoolCount() {
     const chVal = document.getElementById('sectionFilter').value;
     if (!chVal) return;
     const chNum = parseInt(chVal, 10);
-    const pool = fullData.filter(q => q.chapterIndex === chNum && !appData.mastered.includes(q.id));
-    document.getElementById('pool-count').innerText = fullData.length - appData.mastered.length;
+    const repeatForMastery = getRepeatForMastery();
+    let poolSize;
+    if (repeatForMastery) {
+        poolSize = fullData.length - appData.mastered.length;
+    } else {
+        const attempted = appData.attempted || [];
+        poolSize = fullData.filter(q => q.chapterIndex === chNum && !appData.mastered.includes(q.id) && !attempted.includes(q.id)).length;
+    }
+    const el = document.getElementById('pool-count');
+    if (el) el.innerText = String(repeatForMastery ? (fullData.length - appData.mastered.length) : poolSize);
 }
 document.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
@@ -533,7 +637,9 @@ function teacherPanelToggle() {
 document.getElementById('teacherHeader').addEventListener('click', teacherPanelToggle);
 
 loadData().then(data => {
-    if (data.length > 0) { updateDisputeCount(); }
+    var cb = document.getElementById('repeatForMastery');
+    if (cb) cb.checked = getRepeatForMastery();
+    if (data.length > 0) { updateDisputeCount(); updatePoolCount(); }
 });
 </script>
 <script>
